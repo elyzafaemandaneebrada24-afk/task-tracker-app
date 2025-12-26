@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Manager</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="login-screen" class="login-container">
+        <div class="login-box">
+            <h2>Task Manager Login</h2>
+            <input type="password" id="passwordInput" placeholder="Enter Password">
+            <button onclick="checkLogin()">Login</button>
+        </div>
+    </div>
+
+    <div id="main-app" style="display: none;">
+        <div class="container">
+            <h1>Personal To-Do Task Manager</h1>
+            <div class="input-group">
+                <input type="text" id="taskInput" placeholder="Enter a new task...">
+                <select id="priorityInput">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+                <button onclick="addTask()">Add Task</button>
+            </div>
+            <ul id="taskList"></ul>
+        </div>
+
+        <div id="editModal" class="modal">
+            <div class="modal-content">
+                <h3>Edit Task</h3>
+                <input type="text" id="editTaskText">
+                <select id="editTaskPriority">
+                    <option value="Low">Low</option>
+                    <option value="Medium">Medium</option>
+                    <option value="High">High</option>
+                </select>
+                <div class="modal-buttons">
+                    <button onclick="saveEdit()" class="save-btn">Save Changes</button>
+                    <button onclick="closeModal()" class="cancel-btn">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function checkLogin() {
+            const pass = document.getElementById('passwordInput').value;
+            if (pass === "1234") { // change pass here
+                document.getElementById('login-screen').style.display = 'none';
+                document.getElementById('main-app').style.display = 'block';
+                loadTasks();
+            } else {
+                alert("Wrong password!");
+            }
+        }
+
+        async function addTask() {
+    const taskInput = document.getElementById('taskInput');
+    const priorityInput = document.getElementById('priorityInput');
+    
+    const taskData = {
+        text: taskInput.value,
+        priority: priorityInput.value
+    };
+
+    if (!taskData.text) return alert("Please enter a task");
+
+    const response = await fetch('/api/tasks', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(taskData)
+    });
+
+    if (response.ok) {
+        taskInput.value = ''; 
+        loadTasks(); 
+    }
+}
+
+async function loadTasks() {
+    const response = await fetch('/api/tasks');
+    const tasks = await response.json();
+    const list = document.getElementById('taskList');
+    
+    list.innerHTML = ''; 
+    tasks.forEach(task => {
+    const li = document.createElement('li');
+    li.className = `priority-${task.priority.toLowerCase()}`;
+    
+    li.innerHTML = `
+    <span>${task.text} (${task.priority})</span>
+    <div class="actions">
+        <button onclick="editTask('${task.id}', '${task.text}', '${task.priority}')">Edit</button>
+        <button onclick="deleteTask('${task.id}')">Delete</button>
+    </div>
+    `;
+    list.appendChild(li);
+});
+}
+
+async function deleteTask(id) {
+    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    loadTasks();
+}
+
+let currentEditId = null;
+
+function editTask(id, text, priority) {
+    currentEditId = id;
+    document.getElementById('editTaskText').value = text;
+    document.getElementById('editTaskPriority').value = priority;
+    document.getElementById('editModal').style.display = 'block';
+}
+
+async function saveEdit() {
+    const newText = document.getElementById('editTaskText').value;
+    const newPriority = document.getElementById('editTaskPriority').value;
+
+    const response = await fetch(`/api/tasks/${currentEditId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newText, priority: newPriority })
+    });
+
+    if (response.ok) {
+        closeModal();
+        loadTasks();
+    } else {
+        alert("Update failed");
+    }
+}
+
+    if (response.ok) {
+        loadTasks(); 
+    } else {
+        alert("Failed to update task");
+    }
+
+function closeModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+    </script>
+</body>
+</html>
